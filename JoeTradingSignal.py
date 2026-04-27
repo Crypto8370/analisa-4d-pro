@@ -3,56 +3,39 @@ import pandas as pd
 import yfinance as yf
 import plotly.graph_objects as go
 
-# 1. SETTING HALAMAN
-st.set_page_config(page_title="Joe Signal Pro", layout="wide")
+# 1. SETTING
+st.set_page_config(page_title="Joe Signal", layout="wide")
 
 # 2. LOGIN
-if 'cek' not in st.session_state:
-    st.session_state['cek'] = False
+if 'auth' not in st.session_state:
+    st.session_state['auth'] = False
 
-if not st.session_state['cek']:
-    st.title("🔐 Login Joe Signal")
-    kunci = st.text_input("Password:", type="password")
+if not st.session_state['auth']:
+    st.title("🔐 Login")
+    pwd = st.text_input("Password:", type="password")
     if st.button("Masuk"):
-        if kunci == "ADMIN123":
-            st.session_state['cek'] = True
+        if pwd == "ADMIN123":
+            st.session_state['auth'] = True
             st.rerun()
-        else:
-            st.error("Salah Boss!")
-    st.stop()
+        st.stop()
 
-# 3. DASHBOARD
+# 3. KONTEN
 st.title("📊 Joe Trading Signal")
-
-pilih = st.selectbox("Pilih Market:", ["GC=F", "BTC-USD", "DOGE-USD"], 
-                     format_func=lambda x: "GOLD (XAUUSD)" if x=="GC=F" else x)
-
-@st.cache_data(ttl=60)
-def ambil_data(simbol):
-    d = yf.download(simbol, period="60d", interval="1d")
-    d['MA20'] = d['Close'].rolling(20).mean()
-    d['MA50'] = d['Close'].rolling(50).mean()
-    return d
+pilih = st.selectbox("Market:", ["GC=F", "BTC-USD"])
 
 try:
-    df = ambil_data(pilih)
-    harga = df['Close'].iloc[-1]
-    m20 = df['MA20'].iloc[-1]
-    m50 = df['MA50'].iloc[-1]
-
-    st.metric("Harga Saat Ini", f"${harga:,.2f}")
+    df = yf.download(pilih, period="60d")
+    df['MA20'] = df['Close'].rolling(20).mean()
+    df['MA50'] = df['Close'].rolling(50).mean()
     
-    if m20 > m50:
-        st.success("🚀 SINYAL: BUY (Tren Naik)")
-    else:
-        st.error("📉 SINYAL: SELL (Tren Turun)")
+    hrg = df['Close'].iloc[-1]
+    st.metric("Harga Saat Ini", f"${hrg:,.2f}")
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df.index, y=df['Close'], name='Harga'))
+    fig.add_trace(go.Scatter(x=df.index, y=df['Close'], name='Price'))
     fig.add_trace(go.Scatter(x=df.index, y=df['MA20'], name='MA20'))
-    fig.add_trace(go.Scatter(x=df.index, y=df['MA50'], name='MA50'))
     fig.update_layout(template="plotly_dark")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig)
 
 except Exception as e:
     st.error(f"Error: {e}")
